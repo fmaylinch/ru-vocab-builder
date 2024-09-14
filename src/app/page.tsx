@@ -1,24 +1,79 @@
+"use client"
+
 import Image from "next/image";
 import styles from "./page.module.css";
+import {useEffect, useState} from "react";
+import { RussianTrie } from './util/trie';
+import { isCyrillic, splitCyrillic } from './util/text'
 
 export default function Home() {
+
+  const [outputText, setOutputText] = useState("");
+  const [text, setText] = useState("");
+  const [setRussianTrie, setSetRussianTrie] = useState(new RussianTrie());
+  const [trieLoaded, setTrieLoaded] = useState(false);
+
+  useEffect(() => {
+    console.log("useEffect");
+
+    fetch('/vocabulary.csv')
+        .then((r) => r.text())
+        .then(text => {
+          const t = new RussianTrie();
+          const lines = text.split("\n");
+          lines.forEach(line => {
+            const [word, type, ...options] = line.split(",");
+            if (type == "n") {
+              t.insertNoun(word, options);
+            } else if (type == "a") {
+              t.insertAdjective(word)
+            } else if (type == "v") {
+              t.insertVerb(word, options)
+            } else if (word) {
+              t.insertWord(word);
+            }
+          });
+          setSetRussianTrie(t);
+          setTrieLoaded(true);
+        })
+  }, [])
+
+  function updateText(value: string) {
+    setText(value);
+
+    if (value == "") {
+      setOutputText("");
+      return;
+    }
+
+    const pieces = splitCyrillic(value.replaceAll("\n", "<br>"));
+    console.log(pieces);
+
+    const replaced = pieces.map(token => {
+      if (!isCyrillic(token)) {
+        return token;
+      }
+      if (!setRussianTrie.contains(token)) return "<span class='mark'>" + token + "</span>";
+      return token;
+    });
+
+    const output = replaced.join(" ");
+
+    setOutputText(output);
+  }
+
   return (
     <div className={styles.page}>
       <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>src/app/page.tsx</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+        <div>
+          <h1>Highlighted</h1>
+          <div className="highlighted" dangerouslySetInnerHTML={{__html: outputText}}></div>
+        </div>
+        <p>Trie loaded: {trieLoaded ? "yes" : "no"}</p>
+        <textarea value={text} rows={10} onChange={e => updateText(e.target.value)}>
+        </textarea>
+
+        <hr/>
 
         <div className={styles.ctas}>
           <a
