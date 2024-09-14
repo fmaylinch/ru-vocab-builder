@@ -3,7 +3,7 @@
 import Image from "next/image";
 import styles from "./page.module.css";
 import {useEffect, useState} from "react";
-import { RussianTrie } from './util/trie';
+import { RussianTrie, NounOptions, VerbOptions } from './util/trie';
 import { isCyrillic, splitCyrillic } from './util/text'
 
 export default function Home() {
@@ -22,13 +22,15 @@ export default function Home() {
           const t = new RussianTrie();
           const lines = text.split("\n");
           lines.forEach(line => {
-            const [word, type, ...options] = line.split(",");
+            const [word, type, ...optionsJsonSplitted] = line.split(",");
+            const optionsJson = optionsJsonSplitted.join(","); // last parts are a JSON
+            const options = optionsJson ? JSON.parse(optionsJson) : {};
             if (type == "n") {
-              t.insertNoun(word, options);
+              t.insertNoun(word, options as NounOptions); // type is not checked, actually
             } else if (type == "a") {
               t.insertAdjective(word)
             } else if (type == "v") {
-              t.insertVerb(word, options)
+              t.insertVerb(word, options as VerbOptions);
             } else if (word) {
               t.insertWord(word);
             }
@@ -47,13 +49,14 @@ export default function Home() {
     }
 
     const pieces = splitCyrillic(value.replaceAll("\n", "<br>"));
-    console.log(pieces);
 
     const replaced = pieces.map(token => {
       if (!isCyrillic(token)) {
         return token;
       }
-      if (!setRussianTrie.contains(token)) return "<span class='mark'>" + token + "</span>";
+      if (!setRussianTrie.contains(token.toLowerCase())) {
+        return "<span class='mark'>" + token + "</span>";
+      }
       return token;
     });
 

@@ -1,3 +1,15 @@
+export interface NounOptions {
+    gender?: Gender;
+    steam?: string;
+}
+
+export interface VerbOptions {
+    ending1?: string; // ending for 1st person singular
+    prefixes?: string[];
+}
+
+type Gender = "m" | "f" | "n"
+
 export class RussianTrie {
     private readonly trie: Trie;
 
@@ -24,22 +36,21 @@ export class RussianTrie {
         this.insertSteamWithEndings(steam, endings);
     }
 
-    // options: gender (m, f, n)
     // TODO - support ending ь and other variations
-    insertNoun(noun: string, options: string[]) {
+    insertNoun(noun: string, options: NounOptions) {
         const last = noun.slice(-1);
-        let gender = options[0];
-        const declinedStem = options[1];
-        console.log("declinedStem: " + declinedStem);
+        let gender = options.gender;
         if (!gender) { // guess gender
             gender = (last == "а" || last == "я") ? "f" : (last == "о" || last == "е") ? "n" : "m";
         }
-        const steam = declinedStem || ((gender == "m") ? noun : noun.slice(0, -1));
+        const steam = options.steam || ((gender == "m") ? noun : noun.slice(0, -1));
         const steamLast = steam.slice(-1);
 
         const endings = ["е"];
 
+        // TODO: описанием is not included, and описание is included twice
         // TODO: -ия операций, фамилий
+        // TODO: сценарий
 
         if (last == "е") {
             endings.push("ям", "ями", "ях");
@@ -55,7 +66,7 @@ export class RussianTrie {
             if (last == "я") {
                 endings.push("ю", "ей");
             } else { // а
-                endings.push("ую", "ой");
+                endings.push("у", "ой");
             }
         }
         if (gender == "m" || gender == "f") {
@@ -70,16 +81,15 @@ export class RussianTrie {
     }
 
     // options: 1st ending (e.g. шу)
-    insertVerb(verb: string, options: string[]) {
+    insertVerb(verb: string, options: VerbOptions) {
         let steam: string = verb.slice(0, -3);
         const suffix: string = verb.slice(-3);
         const preSteam: string = verb.slice(0, -4);
         const wholeSuffix: string = verb.slice(-4);
 
         const endings = [];
-        const ending1 = options[0];
-        if (ending1) {
-            this.insertSteamWithEndings(preSteam, [ending1]); // e.g. ку + плю
+        if (options.ending1) {
+            this.insertSteamWithEndings(preSteam, [options.ending1]); // e.g. ку + плю
         } else if (wholeSuffix[0] == "с") {
             steam = preSteam + "ш";
             endings.push("у", "ешь", "ет", "ем", "ете", "ут");
@@ -97,6 +107,11 @@ export class RussianTrie {
 
         this.insertWord(verb);
         this.insertSteamWithEndings(steam, endings);
+
+        for (const prefix of options.prefixes || []) {
+            this.insertWord(prefix + verb);
+            this.insertSteamWithEndings(prefix + steam, endings);
+        }
     }
 
     private insertSteamWithEndings(steam: string, endings: string[]) {

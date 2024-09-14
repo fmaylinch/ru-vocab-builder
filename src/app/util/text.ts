@@ -1,5 +1,5 @@
 export function isCyrillic(token: string) {
-    return token.charCodeAt(0) >= "а".charCodeAt(0) && "я".charCodeAt(0) <= 1103;
+    return token.charCodeAt(0) >= "Ё".charCodeAt(0) && "я".charCodeAt(0) <= 1103;
 }
 
 // splits by whitespace, includes the whitespace parts in the result
