@@ -22,8 +22,23 @@ export class RussianTrie {
         this.trie = new Trie();
     }
 
+    generateWords(word: string, options: unknown, type: string): string[] {
+        if (type == "n") {
+            return this.generateNoun(word, options as NounOptions); // type is not checked, actually
+        } else if (type == "a") {
+            return this.generateAdjective(word, {adverb: false})
+        } else if (type == "aa") {
+            return this.generateAdjective(word, {adverb: true})
+        } else if (type == "v") {
+            return this.generateVerb(word, options as VerbOptions);
+        } else if (word) {
+            return [word];
+        }
+        return [];
+    }
+
     // indicate adjective with masculine singular ending: ый, ий, ой
-    insertAdjective(adjective: string, options: AdjectiveOptions) {
+    generateAdjective(adjective: string, options: AdjectiveOptions): string[] {
         const steam: string = adjective.slice(0, -2);
         const suffix: string = adjective.slice(-2);
         const last = steam.slice(-1);
@@ -48,11 +63,11 @@ export class RussianTrie {
         } else {
             endings.push("ые", "ым", "ых", "ыми");
         }
-        this.insertSteamWithEndings(steam, endings);
+        return this.generateSteamWithEndings(steam, endings);
     }
 
     // TODO - support ending ь and other variations
-    insertNoun(noun: string, options: NounOptions) {
+    generateNoun(noun: string, options: NounOptions): string[] {
         const last = noun.slice(-1);
         const last2 = noun.slice(-2);
 
@@ -65,8 +80,7 @@ export class RussianTrie {
                 endings.push('ием', last2 == "ие" ? "ие" : "иев");
             }
             const steam = noun.slice(0, -2);
-            this.insertSteamWithEndings(steam, endings);
-            return;
+            return this.generateSteamWithEndings(steam, endings);
         }
 
         let gender = options.gender;
@@ -110,20 +124,21 @@ export class RussianTrie {
             endings.push("ов"); // TODO: when is it -ев (besides -ий) ?
         }
 
-        this.insertWord(noun);
-        this.insertSteamWithEndings(steam, endings);
+        return [noun, ...this.generateSteamWithEndings(steam, endings)];
     }
 
     // options: 1st ending (e.g. шу)
-    insertVerb(verb: string, options: VerbOptions) {
+    generateVerb(verb: string, options: VerbOptions): string[] {
         let steam: string = verb.slice(0, -3);
         const suffix: string = verb.slice(-3);
         const preSteam: string = verb.slice(0, -4);
         const wholeSuffix: string = verb.slice(-4);
 
+        let result: string[] = [];
+
         const endings = [];
         if (options.ending1) {
-            this.insertSteamWithEndings(preSteam, [options.ending1]); // e.g. ку + плю
+            result = [...result, ...this.generateSteamWithEndings(preSteam, [options.ending1])]; // e.g. ку + плю
         } else if (wholeSuffix[0] == "с") {
             steam = preSteam + "ш";
             endings.push("у", "ешь", "ет", "ем", "ете", "ут");
@@ -139,24 +154,25 @@ export class RussianTrie {
             }
         }
 
-        this.insertWord(verb);
-        this.insertSteamWithEndings(steam, endings);
+        result = [...result, verb, ...this.generateSteamWithEndings(steam, endings)];
 
         for (const prefix of options.prefixes || []) {
-            this.insertWord(prefix + verb);
-            this.insertSteamWithEndings(prefix + steam, endings);
+            result.push(prefix + verb);
+            result = [...result, ...this.generateSteamWithEndings(prefix + steam, endings)];
         }
+
+        return result;
     }
 
-    private insertSteamWithEndings(steam: string, endings: string[]) {
-        endings.forEach(ending => {
-            const word = steam + ending;
-            this.insertWord(word);
-        });
+    private generateSteamWithEndings(steam: string, endings: string[]): string[] {
+        return endings.map(ending => steam + ending);
+    }
+
+    insertWords(words: string[]) {
+        words.forEach(word => this.trie.insert(word));
     }
 
     insertWord(word: string) {
-        console.log(word);
         this.trie.insert(word);
     }
 
