@@ -8,6 +8,11 @@ export interface VerbOptions {
     prefixes?: string[];
 }
 
+export interface AdjectiveOptions {
+    adverb: boolean; // can form an adverb <steam>+о (e.g. хорошо, круто)
+}
+
+// This is actually ending, e.g. we consider мужчина as "f" Gender.
 type Gender = "m" | "f" | "n"
 
 export class RussianTrie {
@@ -18,17 +23,27 @@ export class RussianTrie {
     }
 
     // indicate adjective with masculine singular ending: ый, ий, ой
-    insertAdjective(adjective: string) {
+    insertAdjective(adjective: string, options: AdjectiveOptions) {
         const steam: string = adjective.slice(0, -2);
         const suffix: string = adjective.slice(-2);
         const last = steam.slice(-1);
-        const endings = [suffix, "ая", "ую"];
-        if (last == "ш" || last == "ч") {
+        const last3 = steam.slice(-3);
+        const endings = [suffix];
+        if (options.adverb) {
+            endings.push("о");
+        }
+        if (last3 == "ний") {
+            endings.push("яя", "юю");
+        } else {
+            endings.push("ая", "ую");
+        }
+        if (last == "ш" || last == "ч" || last3 == "ний") {
             endings.push("ее", "его", "ему", "ем", "ей");
         } else {
             endings.push("ое", "ого", "ому", "ом", "ой");
         }
         if (suffix == "ий") {
+            // TODO: if ending is "ний", the endings are different for f gender: -яя, -юю
             endings.push("ие", "им", "их", "ими");
         } else {
             endings.push("ые", "ым", "ых", "ыми");
@@ -39,23 +54,42 @@ export class RussianTrie {
     // TODO - support ending ь and other variations
     insertNoun(noun: string, options: NounOptions) {
         const last = noun.slice(-1);
+        const last2 = noun.slice(-2);
+
+        // special endings
+        if (last2 == "ий" || last2 == "ие" || last2 == "ия" ) { // сценарий, описание, магия
+            const endings = ['ий', 'ия', 'ию', 'ии'];
+            if (last2 == "ия") {
+                endings.push("ией");
+            } else {
+                endings.push('ием', last2 == "ие" ? "ие" : "иев");
+            }
+            const steam = noun.slice(0, -2);
+            this.insertSteamWithEndings(steam, endings);
+            return;
+        }
+
         let gender = options.gender;
         if (!gender) { // guess gender
-            gender = (last == "а" || last == "я") ? "f" : (last == "о" || last == "е") ? "n" : "m";
+            const fEndings = ["а", "я"]; // TODO: ь could be another "Gender"?
+            const nEndings = ["о", "е"];
+            gender = fEndings.indexOf(last) >= 0 ? "f" : nEndings.indexOf(last) >= 0 ? "n" : "m";
         }
         const steam = options.steam || ((gender == "m") ? noun : noun.slice(0, -1));
         const steamLast = steam.slice(-1);
 
         const endings = ["е"];
 
-        // TODO: описанием is not included, and описание is included twice
         // TODO: -ия операций, фамилий
-        // TODO: сценарий
 
         if (last == "е") {
             endings.push("ям", "ями", "ях");
         } else {
             endings.push("ам", "ами", "ах");
+        }
+
+        if (last == "а" || last == "о") {
+            endings.push(""); // empty ending
         }
 
         if (gender == "m" || last == "о") {
@@ -73,7 +107,7 @@ export class RussianTrie {
             endings.push(last == "я" || ["к", "ч"].indexOf(steamLast) >= 0 ? "и" : "ы");
         }
         if (gender == "m") {
-            endings.push("ов");
+            endings.push("ов"); // TODO: when is it -ев (besides -ий) ?
         }
 
         this.insertWord(noun);
@@ -122,7 +156,7 @@ export class RussianTrie {
     }
 
     insertWord(word: string) {
-        //console.log(word);
+        console.log(word);
         this.trie.insert(word);
     }
 

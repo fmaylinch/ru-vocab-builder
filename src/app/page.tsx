@@ -28,7 +28,9 @@ export default function Home() {
             if (type == "n") {
               t.insertNoun(word, options as NounOptions); // type is not checked, actually
             } else if (type == "a") {
-              t.insertAdjective(word)
+              t.insertAdjective(word, {adverb: false})
+            } else if (type == "aa") {
+              t.insertAdjective(word, {adverb: true})
             } else if (type == "v") {
               t.insertVerb(word, options as VerbOptions);
             } else if (word) {
