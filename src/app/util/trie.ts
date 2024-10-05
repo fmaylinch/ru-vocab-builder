@@ -55,7 +55,7 @@ export class RussianTrie {
         } else {
             endings.push("ая", "ую");
         }
-        if (last == "ш" || last == "ч" || last3 == "ний") {
+        if (last == "ш" || last == "щ" || last == "ч" || last3 == "ний") {
             endings.push("ее", "его", "ему", "ем", "ей");
         } else {
             endings.push("ое", "ого", "ому", "ом", "ой");
