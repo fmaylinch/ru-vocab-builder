@@ -16,7 +16,7 @@ export default function Home() {
   const [trieLoaded, setTrieLoaded] = useState(false);
 
   useEffect(() => {
-    console.log("useEffect");
+    console.log("useEffect called"); // called twice if reactStrictMode is true
 
     fetch('/vocabulary.csv')
         .then((r) => r.text())
@@ -82,7 +82,7 @@ export default function Home() {
         <p>Trie loaded: {trieLoaded ? "yes" : "no"}</p>
 
         <hr/>
-        <input placeholder={"Test line"}
+        <input placeholder={"Test line, for example: пример,n"}
                value={testLine} onChange={e => updateTestLine(e.target.value)}/>
         <div className="highlighted" dangerouslySetInnerHTML={{__html: testLineOutput}}></div>
         <hr/>

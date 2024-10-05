@@ -6,6 +6,7 @@ export interface NounOptions {
 export interface VerbOptions {
     ending1?: string; // ending for 1st person singular
     prefixes?: string[];
+    reflexive: boolean;
 }
 
 export interface AdjectiveOptions {
@@ -30,7 +31,9 @@ export class RussianTrie {
         } else if (type == "aa") {
             return this.generateAdjective(word, {adverb: true})
         } else if (type == "v") {
-            return this.generateVerb(word, options as VerbOptions);
+            return this.generateVerb(word, {...(options as VerbOptions), reflexive: false});
+        } else if (type == "vr") {
+            return this.generateVerb(word, {...(options as VerbOptions), reflexive: true});
         } else if (word) {
             return [word];
         }
@@ -134,19 +137,14 @@ export class RussianTrie {
         const preSteam: string = verb.slice(0, -4);
         const wholeSuffix: string = verb.slice(-4);
 
-        let result: string[] = [];
-
-        const endings = [];
-        if (options.ending1) {
-            result = [...result, ...this.generateSteamWithEndings(preSteam, [options.ending1])]; // e.g. ку + плю
-        } else if (wholeSuffix[0] == "с") {
-            steam = preSteam + "ш";
-            endings.push("у", "ешь", "ет", "ем", "ете", "ут");
-        } else if (wholeSuffix[0] == "з") {
-            steam = preSteam + "ж";
-            endings.push("у", "ешь", "ет", "ем", "ете", "ут"); // same as with "с"
+        const endings: string[] = [];
+        let ending1;
+        if (wholeSuffix[0] == "с" || wholeSuffix[0] == "з") {
+            steam = preSteam + (wholeSuffix[0] == "с" ? "ш" : "ж");
+            endings.push("ешь", "ет", "ем", "ете", "ут");
+            ending1 = "у";
         } else {
-            endings.push(suffix == "ать" ? "аю" : "ю");
+            ending1 = suffix == "ать" ? "аю" : "ю";
             if (suffix == "ать") {
                 endings.push("аешь", "ает", "аем", "аете", "ают");
             } else {
@@ -154,11 +152,19 @@ export class RussianTrie {
             }
         }
 
-        result = [...result, verb, ...this.generateSteamWithEndings(steam, endings)];
+        endings.unshift(options.ending1 || ending1)
+
+        let allEndings = endings;
+        if (options.reflexive) {
+            const reflexEndings = ["сь", "ся", "ся", "ся", "сь", "ся"].map((end, i) => endings[i] + end);
+            allEndings = [...endings, ...reflexEndings];
+        }
+
+        let result: string[] = [verb, ...this.generateSteamWithEndings(steam, allEndings)];
 
         for (const prefix of options.prefixes || []) {
             result.push(prefix + verb);
-            result = [...result, ...this.generateSteamWithEndings(prefix + steam, endings)];
+            result = [...result, ...this.generateSteamWithEndings(prefix + steam, allEndings)];
         }
 
         return result;
